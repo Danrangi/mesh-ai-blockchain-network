@@ -1,0 +1,22 @@
+# These are for Mesh Networking
+
+libp2p==0.1.5
+asyncio
+websockets==11.0
+
+# These are for Data & Simulation  
+
+networkx==3.1
+numpy==1.26.4
+pandas==2.2.0
+
+# These are for API Server
+
+fastapi==0.100.0
+uvicorn==0.23.0
+
+# These are for Utilities
+
+python-dotenv==1.0.0
+loguru==0.7.0
+pytest==7.4.0
