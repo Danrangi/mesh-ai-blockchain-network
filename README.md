@@ -95,4 +95,4 @@ GitHub: [@Danrangi](https://github.com/Danrangi)
 
 ## License
 
-MIT License — see [LICENSE](LICENSE) for details.
+MIT License  see [LICENSE](LICENSE) for details.
