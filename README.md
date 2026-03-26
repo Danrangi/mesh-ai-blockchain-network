@@ -88,10 +88,10 @@ mesh-ai-blockchain-network/
 
 ## Author
 
-**Your Name**  
+**Ahmad Muhammad Danrangi**  
 BSc Computer Science  
 Research Focus: Decentralized Networks, AI, Blockchain  
-GitHub: [@your-username](https://github.com/your-username)
+GitHub: [github.com/your-username](https://github.com/Danrangi))
 
 ## License
 
