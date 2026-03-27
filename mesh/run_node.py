@@ -1,17 +1,14 @@
 """
 mesh/run_node.py
 
-Entry point for running a mesh node from the terminal.
+Entry point for running a mesh node with the API server included.
 
 Usage:
-    python run_node.py --port 8765
-    python run_node.py --port 8766
+    python run_node.py --port 8765 --api-port 8000
+    python run_node.py --port 8766 --api-port 8001
 
-Commands once running:
-    Type any text     - broadcast a text message to all peers
-    peers             - list connected nodes
-    send <filepath>   - send a file to all peers
-    quit              - exit
+The mesh node and API server run concurrently.
+Flutter connects to the API server to interact with the mesh.
 """
 
 import asyncio
@@ -26,11 +23,12 @@ from discovery import NodeDiscovery
 from messaging import MeshMessenger
 from filetransfer import FileTransfer
 from profile import get_or_create_username
+from api import start_api_server
 from loguru import logger
 
 
 async def interactive_prompt(messenger, file_transfer, node):
-    """Terminal interface supporting text messages and file sending."""
+    """Terminal chat interface for testing without the Flutter app."""
     loop = asyncio.get_event_loop()
 
     print("\nCommands:")
@@ -60,7 +58,6 @@ async def interactive_prompt(messenger, file_transfer, node):
                         print(f"  {pinfo['node_name']} @ {pinfo['host']}:{pinfo['port']}")
 
             elif user_input.lower().startswith("send "):
-                # Extract file path from command
                 file_path = user_input[5:].strip()
                 await file_transfer.send_file(file_path, recipient_id="broadcast")
 
@@ -71,8 +68,8 @@ async def interactive_prompt(messenger, file_transfer, node):
             break
 
 
-async def main(port: int):
-    """Start the mesh node with all modules running together."""
+async def main(port: int, api_port: int):
+    """Start the mesh node, API server, and terminal interface together."""
 
     username = get_or_create_username(port)
 
@@ -81,28 +78,29 @@ async def main(port: int):
     node = MeshNode(node_name=username, port=port)
     messenger = MeshMessenger(node)
     file_transfer = FileTransfer(node, messenger)
-
-    # Inject file_transfer into messenger so it can route file messages
     messenger.file_transfer = file_transfer
-
     discovery = NodeDiscovery(node)
 
-    print(f"  Name    : {node.node_name}")
-    print(f"  Node ID : {node.node_id[:16]}...")
-    print(f"  Address : {node.host}:{node.port}")
+    print(f"  Name       : {node.node_name}")
+    print(f"  Node ID    : {node.node_id[:16]}...")
+    print(f"  Mesh port  : {node.host}:{port}")
+    print(f"  API port   : {api_port}")
     print()
 
     await messenger.start_server()
 
+    # Run mesh discovery, API server, and terminal prompt all at once
     await asyncio.gather(
         discovery.start(),
+        start_api_server(node, messenger, file_transfer, api_port),
         interactive_prompt(messenger, file_transfer, node)
     )
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Start a Mesh Network Node")
-    parser.add_argument("--port", type=int, default=8765, help="Port to listen on")
+    parser.add_argument("--port", type=int, default=8765, help="Mesh communication port")
+    parser.add_argument("--api-port", type=int, default=8000, help="API server port for Flutter app")
     args = parser.parse_args()
 
-    asyncio.run(main(args.port))
+    asyncio.run(main(args.port, args.api_port))
