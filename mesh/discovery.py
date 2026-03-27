@@ -22,8 +22,7 @@ import time
 from loguru import logger
 
 
-# The port all nodes listen on for discovery messages
-# Every node must use the same port to hear each other
+
 DISCOVERY_PORT = 9000
 
 # How often a node announces itself (in seconds)
@@ -31,35 +30,30 @@ ANNOUNCEMENT_INTERVAL = 5
 
 
 class NodeDiscovery:
-    """
-    Handles automatic discovery of nearby mesh nodes.
-    
-    When started, this module does two things simultaneously:
-    1. Broadcasts this node's info every few seconds
-    2. Listens for broadcasts from other nodes
-    """
 
+    
     def __init__(self, mesh_node):
-        """
-        Args:
-            mesh_node: The MeshNode instance this discovery module belongs to
-        """
+        
         self.node = mesh_node
         self.is_running = False
 
     async def start(self):
+        
         """Start both broadcasting and listening at the same time."""
+        
         self.is_running = True
-        logger.info(f"🔍 Discovery started for {self.node.node_name}")
+        logger.info(f" Discovery started for {self.node.node_name}")
         
         # Run both tasks concurrently using asyncio
         # asyncio.gather() runs multiple async functions at the same time
+        
         await asyncio.gather(
             self._broadcast_presence(),  # Task 1: Announce ourselves
             self._listen_for_peers()     # Task 2: Listen for others
         )
 
     async def _broadcast_presence(self):
+    
         """
         Repeatedly broadcast this node's info to the entire local network.
         
@@ -121,7 +115,7 @@ class NodeDiscovery:
         # Make the socket non-blocking so asyncio can manage it
         sock.setblocking(False)
         
-        logger.info(f"👂 Listening for peers on port {DISCOVERY_PORT}")
+        logger.info(f" Listening for peers on port {DISCOVERY_PORT}")
         
         loop = asyncio.get_event_loop()
         

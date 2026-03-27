@@ -14,74 +14,48 @@ Project: Decentralized Mesh-AI Blockchain Network
 Phase: 1 - Mesh Networking Core
 """
 
-import asyncio          # Python's built-in library for async (non-blocking) operations
-import socket           # For getting the device's IP address
-import json             # For converting data to/from text format (JSON)
-import uuid             # For generating unique IDs
-import time             # For timestamps
-from loguru import logger  # A better version of Python's print() for logging
+import asyncio        
+import socket           
+import json             
+import uuid             
+import time             
+from loguru import logger  
 
 
 class MeshNode:
-    """
-    Represents a single device (node) in the mesh network.
     
-    Think of this class as the 'brain' of each device.
-    Every phone or laptop running this software becomes a node.
-    """
-
     def __init__(self, node_name: str = None, port: int = 8765):
-        """
-        Initialize a new mesh node.
         
-        Args:
-            node_name: A human-readable name (e.g. "node-alice")
-                       If not provided, one is generated automatically
-            port: The network port this node listens on (like a door number)
-                  Default is 8765
-        """
-        
-        # --- Identity ---
-        # Every node gets a universally unique ID (UUID)
-        # This is like a passport number - no two nodes will ever have the same one
+        # This one go generate new Id for each user or Device
         self.node_id = str(uuid.uuid4())
-        
-        # Human-readable name for easier debugging
         self.node_name = node_name or f"node-{self.node_id[:8]}"
         
-        # --- Network Address ---
-        # Get this device's IP address on the local network
-        # This is how other nodes will find and connect to us
+        #this will get the ip address of user or of a device
         self.host = self._get_local_ip()
         self.port = port
         
-        # --- Peer Registry ---
+
         # A dictionary of all known neighboring nodes
         # Format: { node_id: { "host": "192.168.1.5", "port": 8765, "name": "node-bob" } }
         self.peers = {}
         
-        # --- Message History ---
-        # Keeps track of messages we've already seen
-        # This prevents the same message from looping forever in the network
+
+        # Keeps track of messages already seen and this prevents the same message from looping forever in the network
         self.seen_messages = set()
         
-        # --- Node State ---
+        # Node State
         self.is_running = False
         self.start_time = time.time()
         
-        logger.info(f"🟢 Node created: {self.node_name} | ID: {self.node_id[:8]}... | Address: {self.host}:{self.port}")
+        logger.info(f" Node created: {self.node_name} | ID: {self.node_id[:8]}... | Address: {self.host}:{self.port}")
 
     def _get_local_ip(self) -> str:
-        """
-        Automatically detect this device's local IP address.
         
-        The trick: we connect to an external address (doesn't actually send data)
-        just to find out which network interface (and therefore IP) we'd use.
-        """
+        
         try:
-            # Create a temporary socket (communication endpoint)
+            # Create a temporary socket (communication endpoint) Connect to Google's DNS server (we don't actually send anything)
+           
             s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            # Connect to Google's DNS server (we don't actually send anything)
             s.connect(("8.8.8.8", 80))
             ip = s.getsockname()[0]  # Read back what IP we used
             s.close()
@@ -122,19 +96,8 @@ class MeshNode:
             logger.info(f"✅ New peer registered: {peer_info.get('node_name')} @ {peer_info.get('host')}:{peer_info.get('port')}")
         
     def create_message(self, content: str, recipient_id: str = "broadcast") -> dict:
-        """
-        Create a properly formatted mesh network message.
-        
-        Every message in the network has the same structure so all nodes
-        can understand and process it correctly.
-        
-        Args:
-            content: The text content of the message
-            recipient_id: Who to send to. "broadcast" means send to everyone.
-        
-        Returns:
-            A dictionary representing the message
-        """
+       
+
         message = {
             "message_id": str(uuid.uuid4()),   # Unique ID to prevent duplicates
             "sender_id": self.node_id,          # Who sent this
@@ -148,23 +111,8 @@ class MeshNode:
         return message
 
     def should_relay(self, message: dict) -> bool:
-        """
-        Decide whether this node should relay (forward) a message.
+       
         
-        Rules:
-        1. Don't relay messages we've already seen (prevents infinite loops)
-        2. Don't relay messages that have exceeded max hops
-        3. Don't relay our own messages (we already sent them)
-        
-        This is a fundamental concept in mesh networking called
-        'flooding with duplicate suppression'
-        
-        Args:
-            message: The message dictionary to evaluate
-            
-        Returns:
-            True if we should relay, False if we should drop it
-        """
         message_id = message.get("message_id")
         
         # Check if we've seen this message before
@@ -186,8 +134,7 @@ class MeshNode:
         """Mark a message as seen so we don't process it again."""
         self.seen_messages.add(message_id)
         
-        # Keep the seen_messages set from growing forever
-        # If it gets too large, remove the oldest entries
+        # Keep the seen_messages set from growing forever, If it gets too large, remove the oldest entries
         if len(self.seen_messages) > 1000:
             # Convert to list, remove first 100, convert back to set
             seen_list = list(self.seen_messages)
