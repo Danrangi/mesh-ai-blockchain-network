@@ -4,11 +4,14 @@ mesh/run_node.py
 Entry point for running a mesh node from the terminal.
 
 Usage:
-    python run_node.py              (default port 8765)
-    python run_node.py --port 8766  (second simulated user)
+    python run_node.py --port 8765
+    python run_node.py --port 8766
 
-On a real device each installation has one profile.
-In development, each port gets its own profile to simulate multiple users.
+Commands once running:
+    Type any text     - broadcast a text message to all peers
+    peers             - list connected nodes
+    send <filepath>   - send a file to all peers
+    quit              - exit
 """
 
 import asyncio
@@ -21,20 +24,20 @@ sys.path.insert(0, os.path.dirname(__file__))
 from node import MeshNode
 from discovery import NodeDiscovery
 from messaging import MeshMessenger
+from filetransfer import FileTransfer
 from profile import get_or_create_username
 from loguru import logger
 
 
-async def interactive_prompt(messenger, node):
-    """
-    Terminal chat interface. Runs concurrently with discovery and server.
-    """
+async def interactive_prompt(messenger, file_transfer, node):
+    """Terminal interface supporting text messages and file sending."""
     loop = asyncio.get_event_loop()
 
     print("\nCommands:")
-    print("  Type any message and press Enter to broadcast to all peers")
-    print("  Type 'peers' to list connected nodes")
-    print("  Type 'quit' to exit\n")
+    print("  <message>         - broadcast text to all peers")
+    print("  peers             - list connected nodes")
+    print("  send <filepath>   - send a file to all peers")
+    print("  quit              - exit\n")
 
     while True:
         try:
@@ -56,6 +59,11 @@ async def interactive_prompt(messenger, node):
                     for pid, pinfo in node.peers.items():
                         print(f"  {pinfo['node_name']} @ {pinfo['host']}:{pinfo['port']}")
 
+            elif user_input.lower().startswith("send "):
+                # Extract file path from command
+                file_path = user_input[5:].strip()
+                await file_transfer.send_file(file_path, recipient_id="broadcast")
+
             else:
                 await messenger.send_message(user_input, recipient_id="broadcast")
 
@@ -66,14 +74,18 @@ async def interactive_prompt(messenger, node):
 async def main(port: int):
     """Start the mesh node with all modules running together."""
 
-    # Profile is now scoped to port so two terminals = two different users
     username = get_or_create_username(port)
 
     print("\n--- Mesh Node Starting ---")
 
     node = MeshNode(node_name=username, port=port)
-    discovery = NodeDiscovery(node)
     messenger = MeshMessenger(node)
+    file_transfer = FileTransfer(node, messenger)
+
+    # Inject file_transfer into messenger so it can route file messages
+    messenger.file_transfer = file_transfer
+
+    discovery = NodeDiscovery(node)
 
     print(f"  Name    : {node.node_name}")
     print(f"  Node ID : {node.node_id[:16]}...")
@@ -84,7 +96,7 @@ async def main(port: int):
 
     await asyncio.gather(
         discovery.start(),
-        interactive_prompt(messenger, node)
+        interactive_prompt(messenger, file_transfer, node)
     )
 
 
